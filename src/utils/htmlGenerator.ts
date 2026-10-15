@@ -651,9 +651,9 @@ export function generateSchoolHtml(data: SchoolData): string {
     <div class="flex items-center gap-2 shrink-0">
       <button 
         onclick="saveInPlaceAdminChanges()" 
-        class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1 active:scale-95"
+        class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1 active:scale-95"
       >
-        <span>💾 រក្សាទុក</span>
+        <span>💾 រក្សាទុក (Save)</span>
       </button>
 
       <button 
@@ -661,6 +661,14 @@ export function generateSchoolHtml(data: SchoolData): string {
         class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1 active:scale-95"
       >
         <span>📥 ទាញយក HTML ថ្មី</span>
+      </button>
+
+      <button 
+        onclick="resetSavedEdits()" 
+        class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-900 text-rose-300 hover:text-white text-xs transition-all"
+        title="កំណត់ទម្រង់ដើមឡើងវិញ"
+      >
+        <span>🔄 កំណត់ដើម</span>
       </button>
 
       <button 
@@ -825,8 +833,84 @@ export function generateSchoolHtml(data: SchoolData): string {
       }
     }
 
+    // ==========================================
+    // PERSISTENCE ENGINE (រក្សាទុកបានរហូត ក្នុង Browser)
+    // ==========================================
+    const STORAGE_KEY = 'school_web_custom_edits_' + window.location.pathname;
+
+    function applySavedEdits() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) return;
+        const data = JSON.parse(saved);
+        if (data.texts) {
+          Object.keys(data.texts).forEach(selector => {
+            const el = document.querySelector(selector);
+            if (el) el.innerHTML = data.texts[selector];
+          });
+        }
+        if (data.images) {
+          Object.keys(data.images).forEach(selector => {
+            const img = document.querySelector(selector);
+            if (img) img.src = data.images[selector];
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to load saved edits', e);
+      }
+    }
+
+    // Auto load saved changes on startup
+    document.addEventListener('DOMContentLoaded', applySavedEdits);
+    // Also run immediately if DOM is already ready
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      applySavedEdits();
+    }
+
     function saveInPlaceAdminChanges() {
-      showAdminToast('✓ បានរក្សាទុកការកែប្រែទាំងអស់ដោយជោគជ័យ!');
+      try {
+        const editData = { texts: {}, images: {}, timestamp: Date.now() };
+
+        // Save texts
+        const editables = document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, .editable-text');
+        editables.forEach((el, index) => {
+          if (!el.closest('#admin-login-modal') && !el.closest('#floating-admin-bar') && !el.closest('#admin-image-modal') && !el.closest('#admin-toast')) {
+            const selectorKey = el.id ? '#' + el.id : el.tagName.toLowerCase() + ':nth-of-type(' + (index + 1) + ')';
+            editData.texts[selectorKey] = el.innerHTML;
+          }
+        });
+
+        // Save images
+        const images = document.querySelectorAll('img:not(.no-edit)');
+        images.forEach((img, index) => {
+          if (!img.closest('#admin-login-modal') && !img.closest('#floating-admin-bar') && !img.closest('#admin-image-modal')) {
+            const imgKey = img.id ? '#' + img.id : 'img:nth-of-type(' + (index + 1) + ')';
+            editData.images[imgKey] = img.src;
+          }
+        });
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(editData));
+
+        // Notify parent if inside iframe
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'SCHOOL_WEB_SAVED',
+            edits: editData,
+            fullHtml: '<!DOCTYPE html>\n' + document.documentElement.outerHTML
+          }, '*');
+        }
+
+        showAdminToast('✓ បានរក្សាទុកការកែប្រែទាំងអស់បានរហូតជោគជ័យ!');
+      } catch (err) {
+        showAdminToast('⚠️ រក្សាទុកបានតែមួយផ្នែក (រូបភាពអាចមានទំហំធំពេកសម្រាប់ LocalStorage)');
+      }
+    }
+
+    function resetSavedEdits() {
+      if (confirm('តើអ្នកពិតជាចង់លុបការកែប្រែ ហើយត្រឡប់ទៅទម្រង់ដើមវិញមែនទេ?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
+      }
     }
 
     function downloadInPlaceHtml() {

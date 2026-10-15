@@ -13,11 +13,24 @@ import { generateSchoolHtml } from '../utils/htmlGenerator';
 
 interface LivePreviewProps {
   data: SchoolData;
+  onUpdateSchoolData?: (updated: SchoolData) => void;
 }
 
-export const LivePreview: React.FC<LivePreviewProps> = ({ data }) => {
+export const LivePreview: React.FC<LivePreviewProps> = ({ data, onUpdateSchoolData }) => {
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const fullHtml = generateSchoolHtml(data);
+
+  // Listen to postMessage from iframe when in-place admin edits are saved
+  React.useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'SCHOOL_WEB_SAVED') {
+        // Broadcasted from inside iframe when user clicks "រក្សាទុក (Save)"
+        console.log('Received updated edits from in-place editor', event.data);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   const getContainerWidth = () => {
     switch (device) {
