@@ -19,7 +19,8 @@ import {
   ExternalLink,
   RotateCcw,
   Layers,
-  FileCheck
+  FileCheck,
+  Github
 } from 'lucide-react';
 
 import { SchoolData } from './types/school';
@@ -32,6 +33,7 @@ import { AdminEditor } from './components/AdminEditor';
 import { LivePreview } from './components/LivePreview';
 import { CodeOutputSection } from './components/CodeOutputSection';
 import { PublishGuideModal } from './components/PublishGuideModal';
+import { GitHubDeployModal } from './components/GitHubDeployModal';
 
 export default function App() {
   const [schoolData, setSchoolData] = useState<SchoolData>(() => {
@@ -50,6 +52,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<'preview' | 'code' | 'editor' | 'style'>('preview');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isPublishGuideOpen, setIsPublishGuideOpen] = useState(false);
+  const [isGitHubDeployOpen, setIsGitHubDeployOpen] = useState(false);
   const [copiedNotification, setCopiedNotification] = useState(false);
   const [inputInfoText, setInputInfoText] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -292,8 +295,19 @@ export default function App() {
             </button>
           </div>
 
-          {/* Right: ទាញយកhtml/copy (blue) */}
+          {/* Right: auto deploy with github & ទាញយកhtml/copy */}
           <div className="flex items-center gap-2">
+            {/* NEW: auto deploy with github button directly to the left of ទាញយកhtml/copy */}
+            <button
+              type="button"
+              onClick={() => setIsGitHubDeployOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-xs transition-all flex items-center gap-1.5 shadow-sm border border-slate-700 active:scale-95 hover:shadow-slate-500/20"
+              title="Auto Deploy ទៅកាន់ GitHub Pages ដោយស្វ័យប្រវត្ត"
+            >
+              <Github className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-emerald-400 font-bold">auto deploy with github</span>
+            </button>
+
             <button
               type="button"
               onClick={() => {
@@ -456,6 +470,16 @@ export default function App() {
         onClose={() => setIsPublishGuideOpen(false)}
         onOpenEditor={() => setActiveView('editor')}
         onOpenUpload={() => setIsUploadModalOpen(true)}
+      />
+
+      {/* ======================================================== */}
+      {/* AUTO DEPLOY WITH GITHUB MODAL                            */}
+      {/* ======================================================== */}
+      <GitHubDeployModal
+        isOpen={isGitHubDeployOpen}
+        onClose={() => setIsGitHubDeployOpen(false)}
+        htmlContent={generateSchoolHtml(schoolData)}
+        schoolName={schoolData.nameKh}
       />
 
     </div>
