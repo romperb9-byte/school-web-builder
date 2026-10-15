@@ -20,14 +20,99 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ data, onUpdateSchoolDa
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const fullHtml = generateSchoolHtml(data);
 
-  // Listen to postMessage from iframe when in-place admin edits are saved
+  // Listen to postMessage from iframe when in-place admin edits are saved or redeployed
   React.useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'SCHOOL_WEB_SAVED') {
-        // Broadcasted from inside iframe when user clicks "រក្សាទុក (Save)"
+    const handleMessage = async (event: MessageEvent) => {
+      if (!event.data) return;
+
+      if (event.data.type === 'SCHOOL_WEB_SAVED') {
         console.log('Received updated edits from in-place editor', event.data);
       }
+
+      if (event.data.type === 'REQUEST_REDEPLOY_FROM_PARENT') {
+        // Iframe is delegating redeployment to parent to bypass any iframe origin/sandbox issues!
+        const token = localStorage.getItem('gh_pat_token');
+        const repo = localStorage.getItem('gh_repo_name') || 'school-website';
+        const owner = localStorage.getItem('gh_repo_owner') || 'romperb9-byte';
+        const branch = localStorage.getItem('gh_repo_branch') || 'main';
+
+        const iframe = document.querySelector('iframe');
+
+        if (!token) {
+          if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage({
+              type: 'REDEPLOY_RESULT',
+              success: false,
+              message: 'សូមបញ្ចូល GitHub Token ក្នុងផ្ទាំង Auto Deploy with GitHub ជាមុនសិន!'
+            }, '*');
+          }
+          return;
+        }
+
+        try {
+          const htmlToDeploy = event.data.html;
+          const utf8Bytes = new TextEncoder().encode(htmlToDeploy);
+          let binary = '';
+          for (let i = 0; i < utf8Bytes.length; i++) {
+            binary += String.fromCharCode(utf8Bytes[i]);
+          }
+          const base64Content = btoa(binary);
+
+          // Get file sha
+          let fileSha = undefined;
+          try {
+            const fileCheck = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/index.html`, {
+              headers: {
+                Authorization: `Bearer ${token.trim()}`,
+                Accept: 'application/vnd.github+json',
+              },
+            });
+            if (fileCheck.ok) {
+              const fileData = await fileCheck.json();
+              fileSha = fileData.sha;
+            }
+          } catch {}
+
+          // Commit to GitHub
+          const commitRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/index.html`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token.trim()}`,
+              Accept: 'application/vnd.github+json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message: `Update school website [redeploy]`,
+              content: base64Content,
+              sha: fileSha,
+              branch: branch,
+            }),
+          });
+
+          if (!commitRes.ok) {
+            const err = await commitRes.json();
+            throw new Error(err.message || 'GitHub commit failed');
+          }
+
+          if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage({
+              type: 'REDEPLOY_RESULT',
+              success: true,
+              message: '🎉 Redeploy ជោគជ័យ! គេហទំព័រលើ GitHub Pages ទទួលបានទិន្នន័យថ្មីទាំងស្រុង'
+            }, '*');
+          }
+        } catch (err: any) {
+          if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage({
+              type: 'REDEPLOY_RESULT',
+              success: false,
+              message: '❌ Redeploy បរាជ័យ: ' + (err.message || 'Error')
+            }, '*');
+          }
+        }
+      }
     };
+
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, []);

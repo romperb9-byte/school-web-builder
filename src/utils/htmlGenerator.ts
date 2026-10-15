@@ -1005,48 +1005,72 @@ export function generateSchoolHtml(data: SchoolData): string {
       showAdminToast('✓ បានរក្សាទុកការកំណត់ GitHub រួចរាល់!');
     }
 
+    // Listen for redeploy response from parent window
+    window.addEventListener('message', function(ev) {
+      if (ev.data && ev.data.type === 'REDEPLOY_RESULT') {
+        const saveBtn = document.getElementById('admin-save-btn');
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<span>💾 រក្សាទុក & Redeploy</span>';
+        }
+        showAdminToast(ev.data.message);
+      }
+    });
+
     async function saveAndRedeployToGitHub() {
-      // 1. First save edits locally
+      // 1. First save edits locally in browser
       saveInPlaceAdminChanges();
 
-      // 2. Check if GitHub Token exists
+      // Temporarily cleanup contenteditable before export
+      const editables = document.querySelectorAll('[contenteditable]');
+      editables.forEach(el => el.removeAttribute('contenteditable'));
+      document.body.classList.remove('admin-editing');
+
+      const cleanHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+      // Restore admin editing mode
+      enableAdminMode();
+
+      const saveBtn = document.getElementById('admin-save-btn');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>⏳ កំពុង Redeploy...</span>';
+      }
+
+      // If inside an iframe (such as App Preview), delegate to parent
+      if (window.parent && window.parent !== window) {
+        showAdminToast('🚀 កំពុងបញ្ជូនទិន្នន័យដើម្បី Redeploy ទៅកាន់ GitHub Pages...');
+        window.parent.postMessage({
+          type: 'REQUEST_REDEPLOY_FROM_PARENT',
+          html: cleanHtml
+        }, '*');
+        return;
+      }
+
+      // If standalone page, run direct fetch
       const token = localStorage.getItem('gh_pat_token');
       const owner = localStorage.getItem('gh_repo_owner') || 'romperb9-byte';
       const repo = localStorage.getItem('gh_repo_name') || 'school-website';
       const branch = localStorage.getItem('gh_repo_branch') || 'main';
 
       if (!token) {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<span>💾 រក្សាទុក & Redeploy</span>';
+        }
         showAdminToast('⚠️ សូមបញ្ចូល GitHub Token ដើម្បី Redeploy!');
         openGitHubConfigModal();
         return;
       }
 
-      const saveBtn = document.getElementById('admin-save-btn');
-      const originalText = saveBtn ? saveBtn.innerHTML : '';
-      if (saveBtn) {
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<span>⏳ កំពុង Redeploy...</span>';
-      }
-
-      showAdminToast('🚀 កំពុងរៀបចំកូដ និង Push ទៅកាន់ GitHub...');
+      showAdminToast('🚀 កំពុង Push កូដថ្មីទៅកាន់ GitHub...');
 
       try {
-        // Temporarily cleanup contenteditable before export
-        const editables = document.querySelectorAll('[contenteditable]');
-        editables.forEach(el => el.removeAttribute('contenteditable'));
-        document.body.classList.remove('admin-editing');
-
-        const cleanHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-
-        // Restore admin editing mode
-        enableAdminMode();
-
-        // 3. Get existing file sha
         let fileSha = undefined;
         try {
           const fileCheck = await fetch('https://api.github.com/repos/' + owner + '/' + repo + '/contents/index.html', {
             headers: {
-              'Authorization': 'Bearer ' + token,
+              'Authorization': 'Bearer ' + token.trim(),
               'Accept': 'application/vnd.github+json'
             }
           });
@@ -1058,7 +1082,6 @@ export function generateSchoolHtml(data: SchoolData): string {
           console.warn('Could not check sha', e);
         }
 
-        // 4. Encode to UTF-8 Base64
         const utf8Bytes = new TextEncoder().encode(cleanHtml);
         let binary = '';
         for (let i = 0; i < utf8Bytes.length; i++) {
@@ -1066,16 +1089,15 @@ export function generateSchoolHtml(data: SchoolData): string {
         }
         const base64Content = btoa(binary);
 
-        // 5. Commit & Push to GitHub repository
         const commitRes = await fetch('https://api.github.com/repos/' + owner + '/' + repo + '/contents/index.html', {
           method: 'PUT',
           headers: {
-            'Authorization': 'Bearer ' + token,
+            'Authorization': 'Bearer ' + token.trim(),
             'Accept': 'application/vnd.github+json',
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            message: 'In-page admin update & redeploy [skip ci]',
+            message: 'Admin in-page update & redeploy [skip ci]',
             content: base64Content,
             sha: fileSha,
             branch: branch
@@ -1094,7 +1116,7 @@ export function generateSchoolHtml(data: SchoolData): string {
       } finally {
         if (saveBtn) {
           saveBtn.disabled = false;
-          saveBtn.innerHTML = originalText;
+          saveBtn.innerHTML = '<span>💾 រក្សាទុក & Redeploy</span>';
         }
       }
     }

@@ -51,7 +51,10 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
     if (token) {
       localStorage.setItem('gh_pat_token', token);
     }
-  }, [token]);
+    if (repoName) {
+      localStorage.setItem('gh_repo_name', repoName);
+    }
+  }, [token, repoName]);
 
   if (!isOpen) return null;
 
@@ -81,6 +84,7 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
 
       const userData = await userRes.json();
       const username = userData.login;
+      localStorage.setItem('gh_repo_owner', username);
 
       const cleanRepo = (repoName.trim() || 'school-website').replace(/[^a-zA-Z0-9._-]/g, '-');
 
