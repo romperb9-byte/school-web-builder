@@ -188,14 +188,30 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ data, onUpdateSchoolDa
           </button>
         </div>
 
-        {/* Open Full View */}
-        <button
-          onClick={handleOpenNewTab}
-          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors shadow-2xs"
-        >
-          <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
-          <span>បើកពេញអេក្រង់</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Quick Admin Login Trigger Button in preview bar */}
+          <button
+            onClick={() => {
+              const iframe = document.querySelector('iframe');
+              if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({ type: 'TRIGGER_ADMIN_LOGIN' }, '*');
+              }
+            }}
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
+            title="ចូលគ្រប់គ្រងទំព័រ (User: admin / Pass: 123)"
+          >
+            <span>🔐 Login Admin</span>
+          </button>
+
+          {/* Open Full View */}
+          <button
+            onClick={handleOpenNewTab}
+            className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors shadow-2xs"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+            <span>បើកពេញអេក្រង់</span>
+          </button>
+        </div>
       </div>
 
       {/* Frame Container */}
@@ -222,7 +238,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ data, onUpdateSchoolDa
             srcDoc={fullHtml}
             title="School Website Preview"
             className="w-full h-[680px] border-none bg-white"
-            sandbox="allow-scripts allow-same-origin allow-forms"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
           />
 
         </div>

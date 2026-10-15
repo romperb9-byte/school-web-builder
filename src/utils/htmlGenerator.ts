@@ -791,18 +791,42 @@ export function generateSchoolHtml(data: SchoolData): string {
       });
     }
 
+    // Listen for TRIGGER_ADMIN_LOGIN from parent
+    window.addEventListener('message', function(ev) {
+      if (ev.data && ev.data.type === 'TRIGGER_ADMIN_LOGIN') {
+        openAdminModal();
+      }
+    });
+
     // Modal Control
     function openAdminModal() {
       const modal = document.getElementById('admin-login-modal');
       const err = document.getElementById('admin-login-error');
       if (err) err.classList.add('hidden');
-      if (modal) modal.classList.remove('hidden');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+      }
     }
 
     function closeAdminModal() {
       const modal = document.getElementById('admin-login-modal');
-      if (modal) modal.classList.add('hidden');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }
     }
+
+    // Attach click handlers automatically once DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      const loginBtn = document.getElementById('nav-login-btn');
+      if (loginBtn) {
+        loginBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          openAdminModal();
+        });
+      }
+    });
 
     // Admin Login Submission: user=admin, password=123
     function handleAdminLoginSubmit(e) {
