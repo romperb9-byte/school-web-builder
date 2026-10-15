@@ -141,11 +141,20 @@ export function generateSchoolHtml(data: SchoolData): string {
           <a href="#contact" class="hover:text-[${primaryColor}] transition-colors">ទំនាក់ទំនង</a>
         </nav>
 
-        <!-- Admission CTA -->
-        <div class="hidden sm:flex items-center gap-2.5">
+        <!-- Admission CTA & Single Login Button (តែ១កន្លែងគត់) -->
+        <div class="hidden sm:flex items-center gap-2">
           <a href="#admissions" class="px-4 py-2.5 rounded-xl font-medium text-white shadow-md hover:shadow-lg transition-all duration-200 text-sm flex items-center gap-1.5 transform active:scale-95" style="background-color: ${primaryColor};">
             <span>✍️ ចុះឈ្មោះចូលរៀន</span>
           </a>
+          <button 
+            id="nav-login-btn" 
+            type="button"
+            onclick="openAdminModal()" 
+            class="px-3 py-2.5 rounded-xl font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-all text-xs sm:text-sm flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95" 
+            title="ចូលកែប្រែទំព័រដោយផ្ទាល់ (user: admin / pass: 123)"
+          >
+            <span>🔐 Login</span>
+          </button>
         </div>
 
         <!-- Mobile Menu Toggle -->
@@ -548,19 +557,9 @@ export function generateSchoolHtml(data: SchoolData): string {
             <div class="title-font text-white font-bold text-sm">${escapeHtml(data.nameKh)}</div>
             <div class="text-xs text-slate-500">${escapeHtml(data.nameEn)}</div>
           </div>
-        <div class="flex flex-col sm:flex-row items-center gap-4">
-          <p class="text-xs text-slate-500 text-center sm:text-left">
-            © 2026 ${escapeHtml(data.nameKh)}។ រក្សាសិទ្ធិគ្រប់យ៉ាង (All Rights Reserved)។
-          </p>
-          <button 
-            id="footer-login-btn"
-            onclick="openAdminModal()" 
-            class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="ចូលគ្រប់គ្រងទំព័រ (Admin Login: admin / 123)"
-          >
-            <span>🔐 ចូលគ្រប់គ្រង (Admin Login)</span>
-          </button>
-        </div>
+        <p class="text-xs text-slate-500 text-center sm:text-left">
+          © 2026 ${escapeHtml(data.nameKh)}។ រក្សាសិទ្ធិគ្រប់យ៉ាង (All Rights Reserved)។
+        </p>
       </div>
     </div>
   </footer>
@@ -820,16 +819,26 @@ export function generateSchoolHtml(data: SchoolData): string {
       }
     }
 
-    // Attach click handlers automatically once DOM is ready
-    document.addEventListener('DOMContentLoaded', function() {
-      const loginBtn = document.getElementById('footer-login-btn');
+    // Attach click handlers automatically
+    function bindLoginBtn() {
+      const loginBtn = document.getElementById('nav-login-btn');
       if (loginBtn) {
-        loginBtn.addEventListener('click', function(e) {
-          e.preventDefault();
+        loginBtn.onclick = function(e) {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
           openAdminModal();
-        });
+          return false;
+        };
       }
-    });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bindLoginBtn);
+    } else {
+      bindLoginBtn();
+    }
 
     // Admin Login Submission: user=admin, password=123
     function handleAdminLoginSubmit(e) {
