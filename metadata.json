@@ -1,0 +1,6 @@
+{
+  "name": "ប្រព័ន្ធបង្កើតវេបសាយសាលារៀន - School Web Builder",
+  "description": "កម្មវិធីបង្កើតកូដវេបសាយសាលារៀន អាចកែសម្រួលអត្ថបទ ដាក់រូបភាពដោយដៃ និងចម្លងកូដសម្រាប់ Canva ឬ Hosting ជាមួយរចនាប័ទ្ម (Styles) ចម្រុះ",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
